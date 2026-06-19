@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { buildGraph } from "./graph.js";
+import { buildReport } from "./report.js";
+import { buildHtml } from "./html.js";
+import { collectSummaries, scopeLabel, loadGraph, type Scope } from "./scope.js";
+import { find, fileInfo, recent, digest, explain } from "./query.js";
+
+interface Options extends Scope {
+  out: string;
+  limit?: number;
+  terms: string[];
+}
+
+function parseArgs(argv: string[]): Options {
+  const opts: Options = {
+    all: false,
+    out: "claude-graph-out",
+    includeSubagents: false,
+    terms: [],
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--all") opts.all = true;
+    else if (a === "--include-subagents") opts.includeSubagents = true;
+    else if (a === "--project") opts.project = argv[++i];
+    else if (a === "--out" || a === "-o") opts.out = argv[++i];
+    else if (a === "--limit" || a === "-n") opts.limit = Number(argv[++i]);
+    else if (a.startsWith("--project=")) opts.project = a.slice("--project=".length);
+    else if (a.startsWith("--out=")) opts.out = a.slice("--out=".length);
+    else if (a.startsWith("--limit=")) opts.limit = Number(a.slice("--limit=".length));
+    else if (a === "--help" || a === "-h") {
+      printHelp();
+      process.exit(0);
+    } else opts.terms.push(a);
+  }
+  return opts;
+}
+
+function printHelp(): void {
+  console.log(`claude-graph — index & query what you've worked on with Claude Code
+
+Usage:
+  claude-graph <command> [terms…] [options]
+
+Query commands (terse output, for finding things fast):
+  find <terms…>      Files, sessions & tasks matching the terms (ranked)
+  file <terms…>      Deep history of the best-matching file + co-edited files
+  explain <a> <b>    How two files/topics connect (shared sessions + shortest path)
+  recent [n]         Most recent sessions and the files they touched
+  digest             Compact project overview (hub files + recent sessions)
+
+Build command:
+  build              Write graph.html, GRAPH_REPORT.md, graph.json (the viz)
+
+Scope (any command):
+  (default)              Current project, matched by cwd
+  --all                  Every project under ~/.claude/projects
+  --project <substr>     Projects whose folder name contains <substr>
+  --include-subagents    Include subagent sidechain transcripts
+
+Options:
+  -n, --limit <n>        Cap results (query commands)
+  -o, --out <dir>        Output directory for 'build' (default: claude-graph-out)
+  -h, --help             Show help
+
+Examples:
+  claude-graph find auth --all
+  claude-graph file ZulipContext
+  claude-graph explain ZulipContext SignIn
+  claude-graph recent 8
+  claude-graph digest`);
+}
+
+async function runBuild(opts: Options): Promise<void> {
+  const summaries = await collectSummaries(opts);
+  if (!summaries.length) {
+    console.error("No sessions matched. Try --all or --project <name>.");
+    process.exit(1);
+  }
+  const scope = scopeLabel(opts, summaries);
+  const graph = buildGraph(summaries, scope, new Date().toISOString());
+
+  await fsp.mkdir(opts.out, { recursive: true });
+  await Promise.all([
+    fsp.writeFile(path.join(opts.out, "graph.json"), JSON.stringify(graph, null, 2)),
+    fsp.writeFile(path.join(opts.out, "GRAPH_REPORT.md"), buildReport(graph)),
+    fsp.writeFile(path.join(opts.out, "graph.html"), buildHtml(graph, `Claude Graph — ${scope}`)),
+  ]);
+
+  const { sessions, files, projects, tasks, edges } = graph.stats;
+  console.log(
+    `Graph: ${sessions} sessions · ${files} files · ${projects} projects · ${tasks} tasks · ${edges} edges`,
+  );
+  console.log(`Wrote ${path.join(opts.out, "graph.html")} (+ GRAPH_REPORT.md, graph.json)`);
+}
+
+async function runQuery(command: string, opts: Options): Promise<void> {
+  const term = opts.terms.join(" ").trim();
+  const { graph } = await loadGraph(opts);
+  if (!graph.nodes.length) {
+    console.error("No sessions in scope. Try --all or --project <name>.");
+    process.exit(1);
+  }
+
+  switch (command) {
+    case "find":
+      if (!term) return void console.error("Usage: claude-graph find <terms…>");
+      process.stdout.write(find(graph, term, opts.limit ?? 10));
+      break;
+    case "file":
+      if (!term) return void console.error("Usage: claude-graph file <terms…>");
+      process.stdout.write(fileInfo(graph, term, opts.limit ?? 12));
+      break;
+    case "explain":
+      if (opts.terms.length < 2)
+        return void console.error("Usage: claude-graph explain <a> <b>");
+      process.stdout.write(explain(graph, opts.terms[0], opts.terms[1]));
+      break;
+    case "recent":
+      process.stdout.write(recent(graph, opts.limit ?? (term ? Number(term) || 10 : 10)));
+      break;
+    case "digest":
+      process.stdout.write(digest(graph, opts.limit ?? 12));
+      break;
+  }
+}
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  const command = argv[0] && !argv[0].startsWith("-") ? argv[0] : "digest";
+  const rest = command === argv[0] ? argv.slice(1) : argv;
+  const opts = parseArgs(rest);
+
+  if (command === "build") return runBuild(opts);
+  if (["find", "file", "explain", "recent", "digest"].includes(command))
+    return runQuery(command, opts);
+
+  console.error(`Unknown command "${command}".\n`);
+  printHelp();
+  process.exit(1);
+}
+
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});

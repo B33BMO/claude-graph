@@ -1,0 +1,32 @@
+{
+  "name": "claude-graph",
+  "version": "0.1.0",
+  "description": "Turn Claude Code session transcripts into an interactive knowledge graph of what you worked on.",
+  "type": "module",
+  "bin": {
+    "claude-graph": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "knowledge-graph",
+    "visualization"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

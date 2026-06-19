@@ -1,0 +1,3 @@
+# Normalize line endings to LF in the repo to avoid whole-file CRLF/LF conflicts
+# (e.g. local WSL/editor CRLF vs GitHub-web LF).
+* text=auto eol=lf

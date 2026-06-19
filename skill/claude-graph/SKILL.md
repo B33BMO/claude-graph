@@ -44,9 +44,11 @@ claude-graph recent [n]          # most recent sessions and files they touched
 Scope flags (any command): `--all` (every project), `--project <substr>`,
 `-n <limit>`. Default scope is the current working directory's project.
 
-The **codebase overlay** (imports/imported-by) runs automatically for a single
-project (JS/TS & Python). It's skipped under `--all`, or with `--no-overlay`. So
-`deps` and the import sections of `file`/`explain` need a single-project scope.
+The **codebase overlay** (imports/imported-by + symbol names) runs automatically
+for a single project (JS/TS, Python, Go, Rust, Ruby). It's skipped under `--all`
+or with `--no-overlay`, so `deps` and the import sections of `file`/`explain` need
+a single-project scope. `find` also matches **symbol names** (functions, classes,
+types), so you can locate a file by a definition you remember.
 
 If `claude-graph` is not on PATH, run it from the repo with
 `node /path/to/claude-graph/dist/cli.js <command>` or `npx claude-graph <command>`.

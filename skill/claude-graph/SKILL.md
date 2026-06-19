@@ -23,6 +23,8 @@ Reach for this **before** spending tokens on exploration when:
   of a change) → `deps <name>`.
 - You want to know how two files/topics relate (do they get changed together, or
   connect through imports?) → `explain <a> <b>`.
+- You need the *why* behind past work — what was decided and the reasoning →
+  `notes <topic>` (heuristic; pulled from prior prose & reasoning).
 - You're starting in a project and want fast orientation → `digest`.
 
 It complements `grep`/`Read` — it tells you *where to look and what's connected*,
@@ -38,6 +40,7 @@ claude-graph find <terms…>       # files/sessions/tasks matching terms (ranked
 claude-graph file <name>         # history of best-matching file + co-edited + imports
 claude-graph deps <name>         # what a file imports and what imports it
 claude-graph explain <a> <b>     # how two files/topics connect
+claude-graph notes [terms…]      # decisions & rationale ("why") from sessions
 claude-graph recent [n]          # most recent sessions and files they touched
 ```
 

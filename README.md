@@ -102,6 +102,7 @@ claude-graph build                  # → claude-graph-out/graph.html
 | `file <name>` | A file's activity, the sessions that touched it, co-edits, and imports. |
 | `deps <name>` | Code dependencies: what a file imports and what imports it. |
 | `explain <a> <b>` | How two files/topics connect — shared sessions + shortest path. |
+| `notes [terms…]` | Decisions & rationale ("why") from matching sessions' prose & reasoning. |
 | `recent [n]` | Most recent sessions and the files they touched. |
 | `build` | `graph.html` (interactive), `GRAPH_REPORT.md`, `graph.json`. |
 
@@ -166,7 +167,7 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 - [x] Codebase overlay — File nodes ↔ repo structure (JS/TS, Python, Go, Rust, Ruby)
 - [x] Symbol extraction — `find` matches function/class/type names
 - [x] Cached transcript index for fast repeated `--all` queries
-- [ ] Topic & decision extraction from prompts and `thinking` blocks
+- [x] Topic & decision extraction from prompts and `thinking` blocks (`notes`)
 - [ ] More overlay languages (Java, C#, C/C++) + symbol-level reference edges
 
 <div align="center">

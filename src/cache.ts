@@ -9,7 +9,7 @@ import type { SessionSummary } from "./types.js";
 // transcript, keyed by file size + mtime, so repeated runs (especially --all)
 // only re-parse what actually changed — e.g. the live session you're in.
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // bumped: summaries now include prompts + decisions
 
 interface SerializedSummary extends Omit<SessionSummary, "files"> {
   files: [string, SessionSummary["files"] extends Map<string, infer V> ? V : never][];

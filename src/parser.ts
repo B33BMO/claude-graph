@@ -60,6 +60,27 @@ function truncate(s: string, n = 80): string {
   return clean.length > n ? clean.slice(0, n - 1) + "…" : clean;
 }
 
+const MAX_PROMPTS = 25;
+const MAX_DECISIONS = 8;
+
+// Lines that look like a choice or a rationale — used to surface "why" later.
+// Heuristic by design: it favors recall over precision, so output is labeled.
+const DECISION_RE =
+  /\b(i'?ll|i'?m going to|let me|let'?s|i should|we should|decided to|going with|go with|instead of|because|root cause|the (?:issue|problem|fix|bug|culprit) (?:is|was)|the plan|the approach|turns out|key (?:insight|point)|the reason|better to)\b/i;
+
+/** Pull short decision/rationale lines out of a text or thinking block. */
+function extractDecisions(text: string): string[] {
+  const out: string[] = [];
+  const chunks = text.split(/\n+|(?<=[.!])\s+/);
+  for (const raw of chunks) {
+    const s = raw.replace(/\s+/g, " ").trim().replace(/^[-*>#\s]+/, "");
+    if (s.length < 15 || s.length > 180) continue;
+    if (s.endsWith("?")) continue;
+    if (DECISION_RE.test(s)) out.push(s);
+  }
+  return out;
+}
+
 /** Parse one transcript file into a SessionSummary. */
 export async function parseTranscript(filePath: string): Promise<SessionSummary | null> {
   const summary: SessionSummary = {
@@ -72,7 +93,11 @@ export async function parseTranscript(filePath: string): Promise<SessionSummary 
     toolCounts: {},
     files: new Map(),
     tasks: [],
+    prompts: [],
+    decisions: [],
   };
+  const seenPrompts = new Set<string>();
+  const seenDecisions = new Set<string>();
 
   let sawAny = false;
   const rl = createInterface({
@@ -105,17 +130,34 @@ export async function parseTranscript(filePath: string): Promise<SessionSummary 
 
     if (rec.type === "user") {
       summary.userTurns++;
-      if (!summary.title) {
-        const txt = userText(rec.message?.content);
-        if (txt && looksLikeHumanPrompt(txt)) summary.title = truncate(txt);
+      const txt = userText(rec.message?.content);
+      if (txt && looksLikeHumanPrompt(txt)) {
+        if (!summary.title) summary.title = truncate(txt);
+        const p = truncate(txt, 140);
+        if (summary.prompts.length < MAX_PROMPTS && !seenPrompts.has(p)) {
+          seenPrompts.add(p);
+          summary.prompts.push(p);
+        }
       }
     } else if (rec.type === "assistant") {
       summary.assistantTurns++;
     }
 
-    // Tool uses live in assistant message content blocks.
     const content = rec.message?.content;
     if (Array.isArray(content)) {
+      // Decisions/rationale from assistant prose and reasoning.
+      for (const b of content) {
+        if (summary.decisions.length >= MAX_DECISIONS) break;
+        const prose = b.type === "text" ? b.text : b.type === "thinking" ? b.thinking : undefined;
+        if (!prose) continue;
+        for (const d of extractDecisions(prose)) {
+          if (summary.decisions.length >= MAX_DECISIONS) break;
+          if (seenDecisions.has(d)) continue;
+          seenDecisions.add(d);
+          summary.decisions.push(d);
+        }
+      }
+      // Tool uses live in assistant message content blocks.
       for (const b of content) {
         if (b.type !== "tool_use" || !b.name) continue;
         const name = b.name;

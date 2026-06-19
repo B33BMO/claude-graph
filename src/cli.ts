@@ -4,7 +4,7 @@ import path from "node:path";
 import { buildReport } from "./report.js";
 import { buildHtml } from "./html.js";
 import { loadGraph, collectSummaries, type Scope } from "./scope.js";
-import { find, fileInfo, recent, digest, explain, deps } from "./query.js";
+import { find, fileInfo, recent, digest, explain, deps, notes } from "./query.js";
 import { clearCache } from "./cache.js";
 
 interface Options extends Scope {
@@ -51,6 +51,7 @@ Query commands (terse output, for finding things fast):
   file <terms…>      Deep history of the best-matching file + co-edited + imports
   deps <name>        What a file imports and what imports it (code structure)
   explain <a> <b>    How two files/topics connect (shared sessions + shortest path)
+  notes [terms…]     Decisions & rationale ("why") from matching sessions
   recent [n]         Most recent sessions and the files they touched
   digest             Compact project overview (hub files + recent sessions)
 
@@ -131,6 +132,9 @@ async function runQuery(command: string, opts: Options): Promise<void> {
         return void console.error("Usage: claude-graph explain <a> <b>");
       process.stdout.write(explain(graph, opts.terms[0], opts.terms[1]));
       break;
+    case "notes":
+      process.stdout.write(notes(graph, term, opts.limit ?? 5));
+      break;
     case "recent":
       process.stdout.write(recent(graph, opts.limit ?? (term ? Number(term) || 10 : 10)));
       break;
@@ -155,7 +159,7 @@ async function main(): Promise<void> {
 
   if (command === "build") return runBuild(opts);
   if (command === "reindex") return runReindex(opts);
-  if (["find", "file", "deps", "explain", "recent", "digest"].includes(command))
+  if (["find", "file", "deps", "explain", "notes", "recent", "digest"].includes(command))
     return runQuery(command, opts);
 
   console.error(`Unknown command "${command}".\n`);

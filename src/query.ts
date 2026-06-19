@@ -78,12 +78,24 @@ function matchedSymbol(node: GraphNode, term: string): string | null {
   return symbolsOf(node).find((s) => s.toLowerCase().includes(t)) ?? null;
 }
 
+function strArr(v: unknown): string[] {
+  return Array.isArray(v) ? (v as string[]) : [];
+}
+function promptsOf(node: GraphNode): string[] {
+  return strArr(node.meta?.prompts);
+}
+function decisionsOf(node: GraphNode): string[] {
+  return strArr(node.meta?.decisions);
+}
+
 function has(node: GraphNode, term: string): boolean {
   const t = term.toLowerCase();
   if (node.label.toLowerCase().includes(t)) return true;
   const p = node.meta?.path;
   if (typeof p === "string" && p.toLowerCase().includes(t)) return true;
-  return symbolsOf(node).some((s) => s.toLowerCase().includes(t));
+  if (symbolsOf(node).some((s) => s.toLowerCase().includes(t))) return true;
+  // Sessions also match on anything you asked for during them (topics).
+  return promptsOf(node).some((s) => s.toLowerCase().includes(t));
 }
 
 function header(graph: Graph): string {
@@ -340,6 +352,35 @@ function shortestPath(graph: Graph, fromId: string, toId: string): GraphNode[] |
     if (node) chain.unshift(node);
   }
   return chain;
+}
+
+/**
+ * Decisions & rationale ("why") for sessions matching `term`, newest first.
+ * Lines are heuristic — extracted from assistant prose and reasoning.
+ */
+export function notes(graph: Graph, term: string, limit = 5): string {
+  const out: string[] = [header(graph), term ? `notes: "${term}"` : "recent notes", ""];
+  let sessions = graph.nodes.filter((n) => n.type === "session");
+  if (term) sessions = sessions.filter((s) => has(s, term));
+  sessions.sort((a, b) => String(b.meta.lastTs).localeCompare(String(a.meta.lastTs)));
+
+  // Prefer sessions that actually have decisions extracted.
+  const withDecisions = sessions.filter((s) => decisionsOf(s).length);
+  const pick = (withDecisions.length ? withDecisions : sessions).slice(0, limit);
+  if (!pick.length) {
+    out.push(term ? `No sessions match "${term}".` : "No sessions in scope.");
+    return out.join("\n") + "\n";
+  }
+
+  for (const s of pick) {
+    out.push(`## ${day(s.meta.lastTs)} · ${s.label}`);
+    const ds = decisionsOf(s);
+    if (ds.length) for (const d of ds) out.push(`- ${d}`);
+    else out.push(`(no decisions extracted)`);
+    out.push("");
+  }
+  out.push(`_decisions are heuristic — extracted from prose & reasoning_`);
+  return out.join("\n").trimEnd() + "\n";
 }
 
 /** Compact project overview — load this instead of exploring. */

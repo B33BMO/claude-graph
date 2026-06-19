@@ -23,6 +23,7 @@ export interface RawMessage {
 export interface ContentBlock {
   type?: string; // text | thinking | tool_use | tool_result | image
   text?: string;
+  thinking?: string; // reasoning text (thinking block)
   name?: string; // tool name (tool_use)
   input?: Record<string, unknown>; // tool input (tool_use)
 }
@@ -79,6 +80,8 @@ export interface SessionSummary {
   // file_path -> { reads, writes, edits }
   files: Map<string, FileOps>;
   tasks: string[]; // TaskCreate subjects
+  prompts: string[]; // all human prompts (topics discussed), cleaned & capped
+  decisions: string[]; // heuristic decision/rationale lines from text & thinking
 }
 
 export interface FileOps {

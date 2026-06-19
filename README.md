@@ -79,7 +79,7 @@ npm link            # optional: puts `claude-graph` on your PATH
 ```
 
 ```bash
-# 🔎 query (terse, token-cheap — the main event)
+# query (terse, token-cheap — the main event)
 claude-graph digest                 # compact overview of the current project
 claude-graph find auth              # files/sessions/tasks matching "auth"
 claude-graph file ZulipContext      # one file's history + what changes with it
@@ -87,7 +87,7 @@ claude-graph deps zulipApi          # what a file imports / what imports it
 claude-graph explain api SignIn     # how two things connect
 claude-graph recent 8               # most recent sessions
 
-# 🕸️ build the interactive view (the side dish)
+# build the interactive view (the side dish)
 claude-graph build                  # → claude-graph-out/graph.html
 ```
 
@@ -109,7 +109,7 @@ claude-graph build                  # → claude-graph-out/graph.html
 `--include-subagents` · `--no-overlay`. Default = the current directory's project.
 **Options** — `-n/--limit <n>` · `-o/--out <dir>` (build).
 
-## 🤖 Let Claude use it
+## Let Claude use it
 
 The repo ships a Claude Code **skill** (`skill/claude-graph/SKILL.md`) that tells
 Claude to query the index *before* exploring. Install it once:
@@ -123,7 +123,7 @@ New Claude Code sessions pick it up automatically. After that, Claude reaches fo
 `find` / `file` / `deps` / `explain` on its own — and you can invoke it by hand
 with `/claude-graph digest`.
 
-## 🕸️ Codebase overlay
+## Codebase overlay
 
 File nodes are **real paths**, so claude-graph overlays your actual code
 structure onto the session graph. For a single-project scope it scans the repo
@@ -157,9 +157,9 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 
 ## Good to know
 
-- 🪶 **Zero runtime dependencies.** Node ≥ 20.
-- 🔒 **100% local.** No transcript data ever leaves your machine.
-- ♻️ **Always fresh.** Queries re-parse transcripts on every run — no stale index.
+- **Zero runtime dependencies.** Node ≥ 20.
+- **100% local.** No transcript data ever leaves your machine.
+- **Always fresh.** Queries re-parse transcripts on every run — no stale index.
 
 ## Roadmap
 
@@ -167,8 +167,8 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 - [x] Symbol extraction — `find` matches function/class/type names
 - [x] Cached transcript index for fast repeated `--all` queries
 - [ ] Topic & decision extraction from prompts and `thinking` blocks
-- [ ] Optional cached index for very large `--all` scopes
+- [ ] More overlay languages (Java, C#, C/C++) + symbol-level reference edges
 
 <div align="center">
-<sub>Built with Claude Code 🤖 · runs entirely on your machine</sub>
+<sub>Runs entirely on your machine</sub>
 </div>

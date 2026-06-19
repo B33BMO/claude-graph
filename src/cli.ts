@@ -26,6 +26,7 @@ function parseArgs(argv: string[]): Options {
     else if (a === "--include-subagents") opts.includeSubagents = true;
     else if (a === "--no-overlay") opts.noOverlay = true;
     else if (a === "--no-cache") opts.noCache = true;
+    else if (a === "--all-files") opts.allFiles = true;
     else if (a === "--project") opts.project = argv[++i];
     else if (a === "--out" || a === "-o") opts.out = argv[++i];
     else if (a === "--limit" || a === "-n") opts.limit = Number(argv[++i]);
@@ -66,6 +67,7 @@ Scope (any command):
   --include-subagents    Include subagent sidechain transcripts
   --no-overlay           Skip the codebase (imports) overlay
   --no-cache             Don't read/write the parsed-transcript cache
+  --all-files            Keep every read-once / dependency file (full firehose)
 
 Options:
   -n, --limit <n>        Cap results (query commands)

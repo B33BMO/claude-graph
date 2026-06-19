@@ -13,6 +13,7 @@ export interface Scope {
   includeSubagents: boolean;
   noOverlay?: boolean;
   noCache?: boolean;
+  allFiles?: boolean;
 }
 
 export const PROJECTS_ROOT = path.join(os.homedir(), ".claude", "projects");
@@ -100,13 +101,15 @@ export async function loadGraph(scope: Scope): Promise<{
 }> {
   const summaries = await collectSummaries(scope);
   const label = scopeLabel(scope, summaries);
-  let graph = buildGraph(summaries, label, new Date().toISOString());
+  let graph = buildGraph(summaries, label, new Date().toISOString(), {
+    allFiles: scope.allFiles,
+  });
 
   const root = overlayRoot(scope, summaries);
   if (root) {
     try {
       const overlay = await buildOverlay(root);
-      if (overlay.edges.length) graph = applyOverlay(graph, overlay);
+      if (overlay.edges.length) graph = applyOverlay(graph, overlay, { allFiles: scope.allFiles });
     } catch {
       // Overlay is best-effort; a parse failure shouldn't break queries.
     }

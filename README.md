@@ -107,8 +107,19 @@ claude-graph build                  # → claude-graph-out/graph.html
 | `build` | `graph.html` (interactive), `GRAPH_REPORT.md`, `graph.json`. |
 
 **Scope** *(any command)* — `--all` (every project) · `--project <substr>` ·
-`--include-subagents` · `--no-overlay`. Default = the current directory's project.
-**Options** — `-n/--limit <n>` · `-o/--out <dir>` (build).
+`--include-subagents` · `--no-overlay` · `--no-cache`. Default = the current
+directory's project.
+**Options** — `-n/--limit <n>` · `-o/--out <dir>` (build) · `--all-files`.
+
+### Signal over noise
+
+By default a file becomes a node only if it's **meaningful** — you *edited or
+wrote* it, or *read it across ≥2 sessions* — and it isn't in a dependency/build
+dir (`node_modules`, `vendor`, `dist`, `target`, …). The codebase overlay is
+likewise restricted to the **neighborhood of your work** (files connected by
+imports to something you touched). This keeps a one-off "read the whole tree"
+session from burying the graph in thousands of dependency dots. Pass
+`--all-files` for the full firehose.
 
 ## Let Claude use it
 

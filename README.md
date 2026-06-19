@@ -79,7 +79,7 @@ npm link            # optional: puts `claude-graph` on your PATH
 ```
 
 ```bash
-# 🔎 query (terse, token-cheap — the main event)
+# query (terse, token-cheap — the main event)
 claude-graph digest                 # compact overview of the current project
 claude-graph find auth              # files/sessions/tasks matching "auth"
 claude-graph file ZulipContext      # one file's history + what changes with it
@@ -109,7 +109,7 @@ claude-graph build                  # → claude-graph-out/graph.html
 `--include-subagents` · `--no-overlay`. Default = the current directory's project.
 **Options** — `-n/--limit <n>` · `-o/--out <dir>` (build).
 
-## 🤖 Let Claude use it
+## Let Claude use it
 
 The repo ships a Claude Code **skill** (`skill/claude-graph/SKILL.md`) that tells
 Claude to query the index *before* exploring. Install it once:
@@ -151,9 +151,9 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 
 ## Good to know
 
-- 🪶 **Zero runtime dependencies.** Node ≥ 20.
-- 🔒 **100% local.** No transcript data ever leaves your machine.
-- ♻️ **Always fresh.** Queries re-parse transcripts on every run — no stale index.
+-  **Zero runtime dependencies.** Node ≥ 20.
+-  **100% local.** No transcript data ever leaves your machine.
+-  **Always fresh.** Queries re-parse transcripts on every run — no stale index.
 
 ## Roadmap
 
@@ -163,5 +163,5 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 - [ ] Optional cached index for very large `--all` scopes
 
 <div align="center">
-<sub>Built with Claude Code 🤖 · runs entirely on your machine</sub>
+<sub>Runs entirely on your machine</sub>
 </div>

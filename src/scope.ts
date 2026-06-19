@@ -2,9 +2,9 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { parseTranscript } from "./parser.js";
 import { buildGraph, applyOverlay } from "./graph.js";
 import { buildOverlay } from "./overlay.js";
+import { parseAll } from "./cache.js";
 import type { Graph, SessionSummary } from "./types.js";
 
 export interface Scope {
@@ -12,6 +12,7 @@ export interface Scope {
   project?: string;
   includeSubagents: boolean;
   noOverlay?: boolean;
+  noCache?: boolean;
 }
 
 export const PROJECTS_ROOT = path.join(os.homedir(), ".claude", "projects");
@@ -68,18 +69,8 @@ export async function collectSummaries(scope: Scope): Promise<SessionSummary[]> 
   const files: string[] = [];
   for (const d of dirs) files.push(...(await listTranscripts(d, scope.includeSubagents)));
 
-  const summaries: SessionSummary[] = [];
-  for (const f of files) {
-    try {
-      const s = await parseTranscript(f);
-      if (!s) continue;
-      if (cwdFilter && s.cwd !== cwdFilter) continue;
-      summaries.push(s);
-    } catch {
-      // Skip unreadable/corrupt transcripts rather than failing the whole run.
-    }
-  }
-  return summaries;
+  const { summaries } = await parseAll(files, !scope.noCache);
+  return cwdFilter ? summaries.filter((s) => s.cwd === cwdFilter) : summaries;
 }
 
 export function scopeLabel(scope: Scope, summaries: SessionSummary[]): string {

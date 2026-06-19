@@ -3,8 +3,9 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { buildReport } from "./report.js";
 import { buildHtml } from "./html.js";
-import { loadGraph, type Scope } from "./scope.js";
+import { loadGraph, collectSummaries, type Scope } from "./scope.js";
 import { find, fileInfo, recent, digest, explain, deps } from "./query.js";
+import { clearCache } from "./cache.js";
 
 interface Options extends Scope {
   out: string;
@@ -24,6 +25,7 @@ function parseArgs(argv: string[]): Options {
     if (a === "--all") opts.all = true;
     else if (a === "--include-subagents") opts.includeSubagents = true;
     else if (a === "--no-overlay") opts.noOverlay = true;
+    else if (a === "--no-cache") opts.noCache = true;
     else if (a === "--project") opts.project = argv[++i];
     else if (a === "--out" || a === "-o") opts.out = argv[++i];
     else if (a === "--limit" || a === "-n") opts.limit = Number(argv[++i]);
@@ -52,8 +54,9 @@ Query commands (terse output, for finding things fast):
   recent [n]         Most recent sessions and the files they touched
   digest             Compact project overview (hub files + recent sessions)
 
-Build command:
+Build & maintenance:
   build              Write graph.html, GRAPH_REPORT.md, graph.json (the viz)
+  reindex            Clear & rebuild the transcript cache
 
 Scope (any command):
   (default)              Current project, matched by cwd
@@ -61,6 +64,7 @@ Scope (any command):
   --project <substr>     Projects whose folder name contains <substr>
   --include-subagents    Include subagent sidechain transcripts
   --no-overlay           Skip the codebase (imports) overlay
+  --no-cache             Don't read/write the parsed-transcript cache
 
 Options:
   -n, --limit <n>        Cap results (query commands)
@@ -136,6 +140,13 @@ async function runQuery(command: string, opts: Options): Promise<void> {
   }
 }
 
+async function runReindex(opts: Options): Promise<void> {
+  const p = await clearCache();
+  // Warm the cache across every project so the next query is instant.
+  const summaries = await collectSummaries({ ...opts, all: true, noCache: false });
+  console.log(`Cleared cache (${p}) and re-indexed ${summaries.length} transcript(s).`);
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const command = argv[0] && !argv[0].startsWith("-") ? argv[0] : "digest";
@@ -143,6 +154,7 @@ async function main(): Promise<void> {
   const opts = parseArgs(rest);
 
   if (command === "build") return runBuild(opts);
+  if (command === "reindex") return runReindex(opts);
   if (["find", "file", "deps", "explain", "recent", "digest"].includes(command))
     return runQuery(command, opts);
 

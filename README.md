@@ -123,7 +123,7 @@ New Claude Code sessions pick it up automatically. After that, Claude reaches fo
 `find` / `file` / `deps` / `explain` on its own — and you can invoke it by hand
 with `/claude-graph digest`.
 
-## 🕸️ Codebase overlay
+##  Codebase overlay
 
 File nodes are **real paths**, so claude-graph overlays your actual code
 structure onto the session graph. For a single-project scope it scans the repo

@@ -19,8 +19,10 @@ Reach for this **before** spending tokens on exploration when:
 - The user references past work and you need to locate it → `find <terms>` / `recent`.
 - You're about to work on a file and want its history + what changes with it →
   `file <name>`.
-- You want to know how two files/topics relate (do they get changed together?) →
-  `explain <a> <b>`.
+- You need a file's code dependencies — what it imports / what imports it (impact
+  of a change) → `deps <name>`.
+- You want to know how two files/topics relate (do they get changed together, or
+  connect through imports?) → `explain <a> <b>`.
 - You're starting in a project and want fast orientation → `digest`.
 
 It complements `grep`/`Read` — it tells you *where to look and what's connected*,
@@ -33,13 +35,18 @@ Run via Bash (the tool prints plain text to stdout):
 ```bash
 claude-graph digest              # compact overview of the current project
 claude-graph find <terms…>       # files/sessions/tasks matching terms (ranked)
-claude-graph file <name>         # history of best-matching file + co-edited files
+claude-graph file <name>         # history of best-matching file + co-edited + imports
+claude-graph deps <name>         # what a file imports and what imports it
 claude-graph explain <a> <b>     # how two files/topics connect
 claude-graph recent [n]          # most recent sessions and files they touched
 ```
 
 Scope flags (any command): `--all` (every project), `--project <substr>`,
 `-n <limit>`. Default scope is the current working directory's project.
+
+The **codebase overlay** (imports/imported-by) runs automatically for a single
+project (JS/TS & Python). It's skipped under `--all`, or with `--no-overlay`. So
+`deps` and the import sections of `file`/`explain` need a single-project scope.
 
 If `claude-graph` is not on PATH, run it from the repo with
 `node /path/to/claude-graph/dist/cli.js <command>` or `npx claude-graph <command>`.

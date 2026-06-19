@@ -43,7 +43,8 @@ export type EdgeType =
   | "contains" // project -> session
   | "touched" // session -> file
   | "co-edited" // file <-> file (same session)
-  | "worked-on"; // session -> task
+  | "worked-on" // session -> task
+  | "imports"; // file -> file (code structure, from overlay)
 
 export interface GraphEdge {
   source: string;

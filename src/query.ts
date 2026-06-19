@@ -12,6 +12,13 @@ interface Index {
   coedited: Map<string, { file: GraphNode; weight: number }[]>;
   // sessionId -> fileNodes touched
   filesOfSession: Map<string, GraphNode[]>;
+  // fileId -> files it imports / files that import it (from the code overlay)
+  importsOut: Map<string, GraphNode[]>;
+  importsIn: Map<string, GraphNode[]>;
+}
+
+function push<T>(map: Map<string, T[]>, key: string, value: T): void {
+  (map.get(key) ?? map.set(key, []).get(key)!).push(value);
 }
 
 function buildIndex(graph: Graph): Index {
@@ -19,8 +26,19 @@ function buildIndex(graph: Graph): Index {
   const sessionsOfFile = new Map<string, { session: GraphNode; ops: number }[]>();
   const coedited = new Map<string, { file: GraphNode; weight: number }[]>();
   const filesOfSession = new Map<string, GraphNode[]>();
+  const importsOut = new Map<string, GraphNode[]>();
+  const importsIn = new Map<string, GraphNode[]>();
 
   for (const e of graph.edges) {
+    if (e.type === "imports") {
+      const from = byId.get(e.source);
+      const to = byId.get(e.target);
+      if (from && to) {
+        push(importsOut, from.id, to);
+        push(importsIn, to.id, from);
+      }
+      continue;
+    }
     if (e.type === "touched") {
       const session = byId.get(e.source);
       const file = byId.get(e.target);
@@ -40,7 +58,7 @@ function buildIndex(graph: Graph): Index {
       (coedited.get(b.id) ?? coedited.set(b.id, []).get(b.id)!).push({ file: a, weight: e.weight });
     }
   }
-  return { byId, sessionsOfFile, coedited, filesOfSession };
+  return { byId, sessionsOfFile, coedited, filesOfSession, importsOut, importsIn };
 }
 
 function day(ts: unknown): string {
@@ -158,6 +176,51 @@ export function fileInfo(graph: Graph, term: string, limit = 12): string {
     for (const { file, weight } of neighbors) {
       out.push(`- ${file.label}  [${weight}x together]`);
     }
+    out.push("");
+  }
+
+  const imports = (idx.importsOut.get(f.id) ?? []).slice(0, limit);
+  if (imports.length) {
+    out.push(`## imports (code)`);
+    for (const t of imports) out.push(`- ${t.label}`);
+    out.push("");
+  }
+  const importedBy = (idx.importsIn.get(f.id) ?? []).slice(0, limit);
+  if (importedBy.length) {
+    out.push(`## imported by (code)`);
+    for (const t of importedBy) out.push(`- ${t.label}`);
+  }
+  return out.join("\n").trimEnd() + "\n";
+}
+
+/** Code-structure view of a file: what it imports and what imports it. */
+export function deps(graph: Graph, term: string, limit = 20): string {
+  const idx = buildIndex(graph);
+  const f = graph.nodes
+    .filter((n) => n.type === "file" && has(n, term))
+    .sort((a, b) => b.weight - a.weight)[0];
+  if (!f) return `${header(graph)}\nNo file matches "${term}".\n`;
+
+  const out: string[] = [header(graph), `deps: ${f.label}`];
+  const imports = (idx.importsOut.get(f.id) ?? []).slice(0, limit);
+  const importedBy = (idx.importsIn.get(f.id) ?? []).slice(0, limit);
+  if (!imports.length && !importedBy.length) {
+    out.push("");
+    out.push(
+      `No code imports found. (Overlay covers JS/TS & Python in a single ` +
+        `project; run without --all, or the file may have no resolved imports.)`,
+    );
+    return out.join("\n") + "\n";
+  }
+  out.push(`imports ${imports.length} · imported by ${importedBy.length}`, "");
+  if (imports.length) {
+    out.push(`## imports`);
+    for (const t of imports) out.push(`- ${t.label}`);
+    out.push("");
+  }
+  if (importedBy.length) {
+    out.push(`## imported by`);
+    for (const t of importedBy) out.push(`- ${t.label}`);
   }
   return out.join("\n").trimEnd() + "\n";
 }

@@ -129,10 +129,16 @@ File nodes are **real paths**, so claude-graph overlays your actual code
 structure onto the session graph. For a single-project scope it scans the repo
 and adds `imports` edges between files:
 
-- Dependency-free, regex-based extraction for **JS/TS** (`import`/`export from`,
-  `require`, dynamic `import()`) and **Python** (`import` / `from … import`).
-- Relative imports resolved to real on-disk files; externals ignored.
-- Powers `deps`, the import section of `file`, and structural paths in `explain`.
+- Dependency-free, regex-based extraction across **JS/TS** (`import`/`export
+  from`, `require`, dynamic `import()`), **Python** (`import` / `from … import`),
+  **Go** (resolved via the `go.mod` module path), **Rust** (`mod` tree) and
+  **Ruby** (`require_relative`).
+- Relative/in-repo imports resolved to real on-disk files; externals ignored.
+- Also extracts **top-level symbol names** per file (functions, classes, types…)
+  so `find <SymbolName>` locates the defining file even by a name you never typed
+  into a path.
+- Powers `deps`, the import & `defines:` sections of `file`, and structural paths
+  in `explain`.
 
 Runs automatically for single-project scopes; skipped under `--all` or
 `--no-overlay`. *Sessions first, codebase next — now both.*
@@ -157,8 +163,9 @@ by ops) · `file ↔ file` (co-edited) · `file → file` (imports) · `session 
 
 ## Roadmap
 
-- [x] Codebase overlay — File nodes ↔ repo structure (JS/TS & Python imports)
-- [ ] More overlay languages (Go, Rust, Ruby) + symbol-level edges
+- [x] Codebase overlay — File nodes ↔ repo structure (JS/TS, Python, Go, Rust, Ruby)
+- [x] Symbol extraction — `find` matches function/class/type names
+- [x] Cached transcript index for fast repeated `--all` queries
 - [ ] Topic & decision extraction from prompts and `thinking` blocks
 - [ ] Optional cached index for very large `--all` scopes
 

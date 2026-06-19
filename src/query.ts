@@ -67,11 +67,23 @@ function day(ts: unknown): string {
   return isNaN(d.getTime()) ? "????-??-??" : d.toISOString().slice(0, 10);
 }
 
+function symbolsOf(node: GraphNode): string[] {
+  const s = node.meta?.symbols;
+  return Array.isArray(s) ? (s as string[]) : [];
+}
+
+/** The first symbol in `node` that matches `term`, or null. */
+function matchedSymbol(node: GraphNode, term: string): string | null {
+  const t = term.toLowerCase();
+  return symbolsOf(node).find((s) => s.toLowerCase().includes(t)) ?? null;
+}
+
 function has(node: GraphNode, term: string): boolean {
   const t = term.toLowerCase();
   if (node.label.toLowerCase().includes(t)) return true;
   const p = node.meta?.path;
-  return typeof p === "string" && p.toLowerCase().includes(t);
+  if (typeof p === "string" && p.toLowerCase().includes(t)) return true;
+  return symbolsOf(node).some((s) => s.toLowerCase().includes(t));
 }
 
 function header(graph: Graph): string {
@@ -104,8 +116,12 @@ export function find(graph: Graph, term: string, limit = 10): string {
     out.push(`## files (${files.length})`);
     for (const f of files) {
       const sess = idx.sessionsOfFile.get(f.id)?.length ?? 0;
+      // Surface the matched symbol when the hit came from code, not the path.
+      const sym =
+        !f.label.toLowerCase().includes(term.toLowerCase()) ? matchedSymbol(f, term) : null;
+      const symTag = sym ? `  · def ${sym}` : "";
       out.push(
-        `- ${f.label}  [${f.meta.edits ?? 0}e/${f.meta.writes ?? 0}w/${f.meta.reads ?? 0}r · ${sess} sess]`,
+        `- ${f.label}  [${f.meta.edits ?? 0}e/${f.meta.writes ?? 0}w/${f.meta.reads ?? 0}r · ${sess} sess]${symTag}`,
       );
     }
     out.push("");
@@ -155,6 +171,8 @@ export function fileInfo(graph: Graph, term: string, limit = 12): string {
   if (candidates.length > 1) {
     out.push(`(${candidates.length - 1} other files also matched; showing top hit)`);
   }
+  const syms = symbolsOf(f);
+  if (syms.length) out.push(`defines: ${syms.slice(0, 20).join(", ")}`);
   out.push("");
 
   const sess = (idx.sessionsOfFile.get(f.id) ?? [])
@@ -207,8 +225,8 @@ export function deps(graph: Graph, term: string, limit = 20): string {
   if (!imports.length && !importedBy.length) {
     out.push("");
     out.push(
-      `No code imports found. (Overlay covers JS/TS & Python in a single ` +
-        `project; run without --all, or the file may have no resolved imports.)`,
+      `No code imports found. (Overlay covers JS/TS, Python, Go, Rust & Ruby in ` +
+        `a single project; run without --all, or the file may have no resolved imports.)`,
     );
     return out.join("\n") + "\n";
   }

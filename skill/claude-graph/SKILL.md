@@ -30,6 +30,20 @@ Reach for this **before** spending tokens on exploration when:
 It complements `grep`/`Read` — it tells you *where to look and what's connected*,
 then you open only the specific files that matter.
 
+It also helps you **curate context** between sessions:
+
+- You want to capture durable facts/preferences into memory → `memories`
+  (mines history into ready-to-save stubs; it already skips anything an existing
+  memory covers). Full loop: `memories --write` stages stubs under
+  `<memory>/candidates/`, you edit the keepers, then `memories --promote all`
+  (or `--promote <slug>`) moves them into the memory dir and adds a `MEMORY.md`
+  line. Or just read the stubs from plain `memories` and save by hand.
+- You suspect a remembered file/path moved or was deleted → `stale`
+  (`--memory` also checks memory `[[links]]` and referenced paths). Run this
+  before trusting an old note or memory that names a file.
+- You want to know where the *query-don't-read* discipline pays off → `cost`
+  (ranks files by re-read token cost + flags the heaviest sessions).
+
 ## How to run
 
 Run via Bash (the tool prints plain text to stdout):
@@ -42,7 +56,15 @@ claude-graph deps <name>         # what a file imports and what imports it
 claude-graph explain <a> <b>     # how two files/topics connect
 claude-graph notes [terms…]      # decisions & rationale ("why") from sessions
 claude-graph recent [n]          # most recent sessions and files they touched
+claude-graph memories [terms…]   # mine durable facts into save-ready memory stubs
+claude-graph stale [--memory]    # worked-on files (and memory refs) no longer on disk
+claude-graph cost                # costliest files to re-read (≈ tokens) + heavy sessions
 ```
+
+`memories`/`stale`/`cost` touch the real project (its memory dir and files on
+disk), so run them in the project's own scope (default, or `--project <name>`),
+not `--all`. `memories --write`/`--promote` need a single project too. All three
+accept `--json` for machine-readable output (scripting, other tooling).
 
 Scope flags (any command): `--all` (every project), `--project <substr>`,
 `-n <limit>`. Default scope is the current working directory's project.

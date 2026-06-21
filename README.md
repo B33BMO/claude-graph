@@ -87,6 +87,11 @@ claude-graph deps zulipApi          # what a file imports / what imports it
 claude-graph explain api SignIn     # how two things connect
 claude-graph recent 8               # most recent sessions
 
+# curate context between sessions
+claude-graph memories               # mine durable facts → save-ready memory stubs
+claude-graph stale --memory         # files/memory refs that no longer exist on disk
+claude-graph cost                   # costliest files to re-read (≈ tokens)
+
 # build the interactive view (the side dish)
 claude-graph build                  # → claude-graph-out/graph.html
 ```
@@ -104,12 +109,17 @@ claude-graph build                  # → claude-graph-out/graph.html
 | `explain <a> <b>` | How two files/topics connect — shared sessions + shortest path. |
 | `notes [terms…]` | Decisions & rationale ("why") from matching sessions' prose & reasoning. |
 | `recent [n]` | Most recent sessions and the files they touched. |
+| `memories [terms…]` | Mine durable facts/decisions into save-ready memory stubs; `--write` stages them under `<memory>/candidates/`, `--promote <slug\|all>` moves staged stubs into memory + `MEMORY.md`. Skips what existing memories already cover. |
+| `stale` | Worked-on files no longer on disk (renamed/deleted); `--memory` also checks memory `[[links]]` & referenced paths. |
+| `cost` | Costliest files to re-read (≈ tokens = size × opens) + the heaviest sessions. |
 | `build` | `graph.html` (interactive), `GRAPH_REPORT.md`, `graph.json`. |
 
 **Scope** *(any command)* — `--all` (every project) · `--project <substr>` ·
 `--include-subagents` · `--no-overlay` · `--no-cache`. Default = the current
 directory's project.
-**Options** — `-n/--limit <n>` · `-o/--out <dir>` (build) · `--all-files`.
+**Options** — `-n/--limit <n>` · `-o/--out <dir>` (build) · `--all-files` ·
+`--json` (memories/stale/cost) · `--write`/`--promote` (memories) ·
+`--memory` (stale).
 
 ### Signal over noise
 
@@ -134,6 +144,29 @@ ln -sfn "$PWD/skill/claude-graph" ~/.claude/skills/claude-graph   # skill discov
 New Claude Code sessions pick it up automatically. After that, Claude reaches for
 `find` / `file` / `deps` / `explain` on its own — and you can invoke it by hand
 with `/claude-graph digest`.
+
+### Auto-orient every session (optional)
+
+Add a `SessionStart` hook so each new/resumed session begins with the current
+project's `digest` already in context — no turn spent orienting:
+
+```json
+// ~/.claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "claude-graph digest 2>/dev/null || true", "timeout": 15 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The `2>/dev/null || true` keeps it silent in projects with no history.
 
 ## Codebase overlay
 

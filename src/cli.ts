@@ -5,12 +5,17 @@ import { buildReport } from "./report.js";
 import { buildHtml } from "./html.js";
 import { loadGraph, collectSummaries, type Scope } from "./scope.js";
 import { find, fileInfo, recent, digest, explain, deps, notes } from "./query.js";
+import { memories, stale, cost } from "./insights.js";
 import { clearCache } from "./cache.js";
 
 interface Options extends Scope {
   out: string;
   limit?: number;
   terms: string[];
+  write?: boolean;
+  memory?: boolean;
+  json?: boolean;
+  promote?: boolean;
 }
 
 function parseArgs(argv: string[]): Options {
@@ -27,6 +32,10 @@ function parseArgs(argv: string[]): Options {
     else if (a === "--no-overlay") opts.noOverlay = true;
     else if (a === "--no-cache") opts.noCache = true;
     else if (a === "--all-files") opts.allFiles = true;
+    else if (a === "--write") opts.write = true;
+    else if (a === "--memory") opts.memory = true;
+    else if (a === "--json") opts.json = true;
+    else if (a === "--promote") opts.promote = true;
     else if (a === "--project") opts.project = argv[++i];
     else if (a === "--out" || a === "-o") opts.out = argv[++i];
     else if (a === "--limit" || a === "-n") opts.limit = Number(argv[++i]);
@@ -56,6 +65,13 @@ Query commands (terse output, for finding things fast):
   recent [n]         Most recent sessions and the files they touched
   digest             Compact project overview (hub files + recent sessions)
 
+Memory & upkeep (terse output, for curating context):
+  memories [terms…]  Mine durable decisions into ready-to-save memory stubs
+                     (--write stages them under <memory>/candidates/;
+                      --promote <slug|all> moves staged stubs into memory + MEMORY.md)
+  stale              Worked-on files no longer on disk (--memory checks memory too)
+  cost               Costliest files to re-read (≈ tokens) + heaviest sessions
+
 Build & maintenance:
   build              Write graph.html, GRAPH_REPORT.md, graph.json (the viz)
   reindex            Clear & rebuild the transcript cache
@@ -68,6 +84,10 @@ Scope (any command):
   --no-overlay           Skip the codebase (imports) overlay
   --no-cache             Don't read/write the parsed-transcript cache
   --all-files            Keep every read-once / dependency file (full firehose)
+  --write                (memories) Stage candidate stubs as files for review
+  --promote <slug|all>   (memories) Move staged stubs into memory + MEMORY.md
+  --memory               (stale) Also check memory [[links]] & referenced paths
+  --json                 (memories/stale/cost) Machine-readable output
 
 Options:
   -n, --limit <n>        Cap results (query commands)
@@ -146,6 +166,38 @@ async function runQuery(command: string, opts: Options): Promise<void> {
   }
 }
 
+async function runInsights(command: string, opts: Options): Promise<void> {
+  const { graph, overlayRoot } = await loadGraph(opts);
+  if (!graph.nodes.length) {
+    console.error("No sessions in scope. Try --all or --project <name>.");
+    process.exit(1);
+  }
+  // Insights touch the real project (memory dir, files on disk), so they need a
+  // single concrete root. Fall back to cwd for the default (current-project) scope.
+  const root = overlayRoot ?? (!opts.all && !opts.project ? process.cwd() : null);
+  const io = {
+    limit: opts.limit,
+    write: opts.write,
+    memory: opts.memory,
+    json: opts.json,
+    promote: opts.promote,
+    root,
+  };
+  const term = opts.terms.join(" ").trim();
+
+  switch (command) {
+    case "memories":
+      process.stdout.write(memories(graph, term, io));
+      break;
+    case "stale":
+      process.stdout.write(stale(graph, io));
+      break;
+    case "cost":
+      process.stdout.write(cost(graph, io));
+      break;
+  }
+}
+
 async function runReindex(opts: Options): Promise<void> {
   const p = await clearCache();
   // Warm the cache across every project so the next query is instant.
@@ -161,6 +213,7 @@ async function main(): Promise<void> {
 
   if (command === "build") return runBuild(opts);
   if (command === "reindex") return runReindex(opts);
+  if (["memories", "stale", "cost"].includes(command)) return runInsights(command, opts);
   if (["find", "file", "deps", "explain", "notes", "recent", "digest"].includes(command))
     return runQuery(command, opts);
 
